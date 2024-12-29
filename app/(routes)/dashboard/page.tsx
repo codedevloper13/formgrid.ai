@@ -3,6 +3,7 @@ import { PlusIcon } from "lucide-react";
 import React from "react";
 import StatsListWrap from "./_components/StatsListWrap";
 import PrimarySeparator from "./_components/PrimarySeparator";
+import CreateForm from "./_components/CreateForm";
 
 const Dashboard = () => {
   return (
@@ -15,10 +16,7 @@ const Dashboard = () => {
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
                 Dashboard
               </h1>
-              <Button variant="default" size="lg" className="gap-2">
-                <PlusIcon className="h-5 w-5" />
-                Create a form
-              </Button>
+              <CreateForm />
             </div>
             <StatsListWrap />
           </section>
@@ -29,6 +27,9 @@ const Dashboard = () => {
               <h5 className="text-1xl  font-semibold tracking-tight uppercase">
                 All Forms
               </h5>
+            </div>
+            <div className="flex items-center justify-center text-muted-foreground">
+              <p>No forms created yet.</p>
             </div>
           </section>
         </div>
