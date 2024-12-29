@@ -1,4 +1,5 @@
 "use server";
+import { defaultBackgroundColor, defaultPrimaryColor } from "@/constant";
 import { db } from "@/database/db";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
@@ -19,7 +20,7 @@ export async function fetchFromStatts() {
         const user = await session.getUser();
         if(!user) {
             return {
-                sucess: false,
+                success: false,
                 message: "Unauthorized to use this resources",
                 
             };
@@ -53,8 +54,61 @@ export async function fetchFromStatts() {
         
     } catch (error) {
          return {
-                sucess: false,
+                success: false,
                 message: error instanceof Error ? error.message : "Unauthorized to use this resources",
             };
+    }
+}
+
+// Create form 
+
+export async function createForm(data: { name: string; description:string}) {
+    try {
+        const session = await getKindeServerSession();
+        const user = await session.getUser();
+        if(!user) {
+            return {
+                success: false,
+                message: "Unauthorized to use this resources",
+                
+            };
+        }
+
+        const formSettings = await db.formSettings.create({
+            data: {
+                primaryColor:defaultPrimaryColor,
+                backgroundColor: defaultBackgroundColor,
+                
+            }
+        });
+
+        // create form
+        const form = await db.form.create({
+            data: {
+                name: data.name,
+                description: data.description,
+                userId: user.id,
+                creatorName: user?.given_name || "",
+                settingsId: formSettings.id
+            }
+        });
+        if(!form)   {
+            return {
+                success: false,
+                message: "Something went wrong while creating your form. Please try again.",
+                
+            };
+        }
+        return {
+            success: true,
+            message: "Form created successfully",
+            form
+        }
+       
+    } catch (error) {
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Unauthorized to use this resources",
+        };
     }
 }
