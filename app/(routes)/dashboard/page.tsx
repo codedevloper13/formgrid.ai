@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import React from "react";
+import React, { Suspense } from "react";
 import StatsListWrap from "./_components/StatsListWrap";
 import PrimarySeparator from "./_components/PrimarySeparator";
 import CreateForm from "./_components/CreateForm";
+import { Loader } from "lucide-react";
+import FormList from "./_components/FormList";
 
 const Dashboard = () => {
   return (
@@ -28,8 +28,21 @@ const Dashboard = () => {
                 All Forms
               </h5>
             </div>
-            <div className="flex items-center justify-center text-muted-foreground">
+            {/* <div className="flex items-center justify-center text-muted-foreground">
               <p>No forms created yet.</p>
+            </div> */}
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-3 xl:grid-cols-5">
+              <Suspense
+                fallback={[1, 2, 3, 4].map((item) => (
+                  <Loader
+                    size="3rem"
+                    key={item}
+                    className="animate-spin mx-auto"
+                  />
+                ))}
+              >
+                <FormList />
+              </Suspense>
             </div>
           </section>
         </div>
