@@ -1,0 +1,10 @@
+[lcl-host]
+realm-apid = 'localhost'
+
+[org]
+apid = 'codedevloper13'
+
+[service]
+apid = 'formgrid-ai'
+category = 'javascript'
+cert-style = 'acme'
