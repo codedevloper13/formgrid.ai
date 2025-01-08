@@ -17,23 +17,27 @@ import {
 } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
 
-export default function Page() {
-  const pathname = usePathname();
+interface SidebarProps {
+  children?: React.ReactNode;
+}
 
+export default function Sidebar({ children }: SidebarProps) {
+  const pathname = usePathname();
+  
   // Convert path to breadcrumb segments
   const segments = pathname
     .split("/")
-    .filter(Boolean)
-    .map((segment) => ({
+    .filter(Boolean) // Remove empty strings
+    .map((segment, index, array) => ({
       title: segment
         .split("-")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(" "),
-      href: `/${segment}`,
+      href: "/" + array.slice(0, index + 1).join("/"),
     }));
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen>
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
@@ -43,11 +47,8 @@ export default function Page() {
             <Breadcrumb>
               <BreadcrumbList>
                 {segments.map((segment, index) => (
-                  <>
-                    <BreadcrumbItem
-                      key={segment.href}
-                      className="hidden md:block"
-                    >
+                  <div key={segment.href}>
+                    <BreadcrumbItem className="hidden md:block">
                       {index === segments.length - 1 ? (
                         <BreadcrumbPage>{segment.title}</BreadcrumbPage>
                       ) : (
@@ -59,12 +60,15 @@ export default function Page() {
                     {index < segments.length - 1 && (
                       <BreadcrumbSeparator className="hidden md:block" />
                     )}
-                  </>
+                  </div>
                 ))}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
+        <main className="flex-1 p-6">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

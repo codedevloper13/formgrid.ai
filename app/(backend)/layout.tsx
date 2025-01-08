@@ -7,10 +7,7 @@ export default function BackendLayout({
 }>) {
   return (
     <div className="relative flex min-h-screen">
-      <main className="flex-1">
-        <Sidebar />
-        {children}
-      </main>
+      <Sidebar>{children}</Sidebar>
     </div>
   );
 }
