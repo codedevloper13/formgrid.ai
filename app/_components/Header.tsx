@@ -1,7 +1,6 @@
 "use client";
 
 import { UserButton, useAuth } from "@clerk/nextjs";
-import Image from "next/image";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
@@ -16,14 +15,32 @@ const Header = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <Image
-                src="/logo.svg"
-                alt="logo"
-                width={180}
-                height={54}
-                className="hover:opacity-75 transition-all duration-200"
-                unoptimized
-              />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-6 w-6"
+                >
+                  <path d="M12 3L17 8L12 13L7 8L12 3Z" />
+                  <path d="M17 8L21 12L17 16L13 12L17 8Z" />
+                  <path d="M7 8L3 12L7 16L11 12L7 8Z" />
+                  <path d="M12 13L17 18L12 21L7 18L12 13Z" />
+                  <circle cx="12" cy="3" r="0.5" fill="white" />
+                  <circle cx="17" cy="8" r="0.5" fill="white" />
+                  <circle cx="7" cy="8" r="0.5" fill="white" />
+                  <circle cx="12" cy="13" r="0.5" fill="white" />
+                  <circle cx="12" cy="21" r="0.5" fill="white" />
+                  <path d="M12 3v18" strokeDasharray="1 2" strokeWidth="1" />
+                </svg>
+              </div>
+              <span className="ml-3 text-xl font-semibold text-primary">
+                Formgrid.ai
+              </span>
             </Link>
           </div>
 
@@ -60,7 +77,7 @@ const Header = () => {
                   >
                     Dashboard
                   </Link>
-                  <UserButton 
+                  <UserButton
                     afterSignOutUrl="/"
                     appearance={{
                       elements: {
@@ -68,11 +85,14 @@ const Header = () => {
                         avatarBox: "w-8 h-8 rounded-full",
                         userPreviewMainIdentifier: "font-medium text-gray-700",
                         userPreviewSecondaryIdentifier: "text-gray-500 text-sm",
-                        userButtonPopoverCard: "shadow-md rounded-md border border-gray-200",
+                        userButtonPopoverCard:
+                          "shadow-md rounded-md border border-gray-200",
                         userButtonPopoverActions: "p-0 m-0",
-                        userButtonPopoverActionButton: "text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 flex items-center gap-2",
-                        userButtonPopoverFooter: "p-4 bg-gray-50 text-center text-sm text-gray-500"
-                      }
+                        userButtonPopoverActionButton:
+                          "text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 flex items-center gap-2",
+                        userButtonPopoverFooter:
+                          "p-4 bg-gray-50 text-center text-sm text-gray-500",
+                      },
                     }}
                   />
                 </div>
@@ -131,19 +151,24 @@ const Header = () => {
                           Dashboard
                         </Link>
                         <div className="flex justify-center">
-                          <UserButton 
+                          <UserButton
                             afterSignOutUrl="/"
                             appearance={{
                               elements: {
                                 rootBox: "w-8 h-8",
                                 avatarBox: "w-8 h-8 rounded-full",
-                                userPreviewMainIdentifier: "font-medium text-gray-700",
-                                userPreviewSecondaryIdentifier: "text-gray-500 text-sm",
-                                userButtonPopoverCard: "shadow-md rounded-md border border-gray-200",
+                                userPreviewMainIdentifier:
+                                  "font-medium text-gray-700",
+                                userPreviewSecondaryIdentifier:
+                                  "text-gray-500 text-sm",
+                                userButtonPopoverCard:
+                                  "shadow-md rounded-md border border-gray-200",
                                 userButtonPopoverActions: "p-0 m-0",
-                                userButtonPopoverActionButton: "text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 flex items-center gap-2",
-                                userButtonPopoverFooter: "p-4 bg-gray-50 text-center text-sm text-gray-500"
-                              }
+                                userButtonPopoverActionButton:
+                                  "text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 flex items-center gap-2",
+                                userButtonPopoverFooter:
+                                  "p-4 bg-gray-50 text-center text-sm text-gray-500",
+                              },
                             }}
                           />
                         </div>

@@ -10,8 +10,27 @@ const Signin = () => {
       <div className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
+            <div className="flex justify-center mb-8 items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-6 w-6 text-primary-foreground"
+                >
+                  <path d="M3.8 3.8l16.4 16.4M20.2 3.8L3.8 20.2M15 3h6v6M9 21H3v-6" />
+                </svg>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                Formgrid.ai
+              </span>
+            </div>
             <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-              Create Account
+              Sign in to your Account
             </h1>
             <p className="mt-3 text-lg text-gray-600">
               Join us to start your journey
