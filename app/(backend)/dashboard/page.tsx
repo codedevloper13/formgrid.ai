@@ -1,4 +1,13 @@
+import CreateForm from "../_component/CreateForm";
+
 const Dashboard = () => {
-  return <div>Hello iam the dashboard</div>;
+  return (
+    <div className="flex h-screen">
+      <div className="flex flex-col  pr-4 ml-auto">
+        <CreateForm />
+      </div>
+    </div>
+  );
 };
+
 export default Dashboard;
