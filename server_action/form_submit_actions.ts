@@ -3,6 +3,7 @@
 import { chatSession } from '@/config/AiModal';
 import { PrismaClient } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@clerk/nextjs/server'
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,12 @@ function createSlug(title: string): string {
 
 export async function submitForm(buttonType: string, textareaValue: string) {
   try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new Error("Unauthorized: User must be logged in");
+    }
+
     // Add your server-side logic here
     if (buttonType === 'Manually' && textareaValue === "") {
       const title = "Untitled Form";
@@ -23,7 +30,8 @@ export async function submitForm(buttonType: string, textareaValue: string) {
           title,
           slug: createSlug(title),
           description: "Untitled Description",
-          jsonform: {}
+          jsonform: {},
+          userId: userId
         }
       });
       return {
@@ -136,7 +144,8 @@ export async function submitForm(buttonType: string, textareaValue: string) {
             title: parsedForm.formTitle || "AI Generated Form",
             slug: createSlug(parsedForm.formTitle || "ai-generated-form"),
             description: parsedForm.formDescription || 'Untitled Description',
-            jsonform: parsedForm
+            jsonform: parsedForm,
+            userId: userId
           }
         });
         
@@ -168,11 +177,28 @@ export async function submitForm(buttonType: string, textareaValue: string) {
   }
 }
 
+/**
+ * This TypeScript function retrieves a form by its ID after checking user authentication and
+ * ownership.
+ * @param {string} formId - The `formId` parameter in the `getFormById` function is a string that
+ * represents the unique identifier of the form that you want to retrieve from the database. This
+ * function is designed to fetch a form based on its `formId` and the authenticated user's `userId`.
+ * @returns The function `getFormById` returns an object with two properties: `success` and `data`. The
+ * `success` property is a boolean value indicating whether the operation was successful, and the
+ * `data` property contains the form data if found.
+ */
 export async function getFormById(formId: string) {
   try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new Error("Unauthorized: User must be logged in");
+    }
+
     const form = await prisma.forms.findUnique({
       where: {
         id: formId,
+        userId: userId
       },
     });
 
@@ -190,19 +216,48 @@ export async function getFormById(formId: string) {
   }
 }
 
+/**
+ * This TypeScript function retrieves a specified number of forms for a user, handling authentication
+ * and pagination.
+ * @param {number} [page=1] - The `page` parameter in the `getForms` function is used to specify the
+ * page number of forms to retrieve. By default, it is set to 1 if not provided. This parameter is used
+ * to calculate the offset for pagination, allowing users to navigate through different pages of forms.
+ * @param {number} [limit=10] - The `limit` parameter in the `getForms` function specifies the maximum
+ * number of forms to retrieve in a single request. By default, if the `limit` parameter is not
+ * provided when calling the function, it is set to 10. This means that by default, the function will
+ * retrieve up
+ * @returns The `getForms` function returns an object with the following properties:
+ * - `forms`: an array of form objects retrieved from the database
+ * - `total`: the total number of forms for the user in the database
+ * - `page`: the current page number
+ * - `limit`: the limit of forms per page
+ */
 export async function getForms(page: number = 1, limit: number = 10) {
   try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new Error("Unauthorized: User must be logged in");
+    }
+
     const skip = (page - 1) * limit;
 
     const [forms, total] = await Promise.all([
       prisma.forms.findMany({
+        where: {
+          userId: userId
+        },
         skip,
         take: limit,
         orderBy: {
           createdAt: "desc",
         },
       }),
-      prisma.forms.count(),
+      prisma.forms.count({
+        where: {
+          userId: userId
+        }
+      }),
     ]);
 
     return {
@@ -214,5 +269,47 @@ export async function getForms(page: number = 1, limit: number = 10) {
   } catch (error) {
     console.error("Error fetching forms:", error);
     throw new Error("Failed to fetch forms");
+  }
+}
+
+/**
+ * The function `deleteForm` deletes a form associated with a specific formId after performing
+ * authorization checks.
+ * @param {string} formId - The `formId` parameter is a string that represents the unique identifier of
+ * the form that you want to delete. This identifier is used to locate and delete the specific form
+ * from the database.
+ * @returns The `deleteForm` function returns an object with a `success` property set to `true` if the
+ * form deletion is successful.
+ */
+export async function deleteForm(formId: string) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new Error("Unauthorized: User must be logged in");
+    }
+
+    const form = await prisma.forms.findUnique({
+      where: {
+        id: formId,
+        userId: userId
+      }
+    });
+
+    if (!form) {
+      throw new Error("Form not found or unauthorized");
+    }
+
+    await prisma.forms.delete({
+      where: {
+        id: formId
+      }
+    });
+
+    revalidatePath('/forms');
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting form:", error);
+    throw error;
   }
 }
