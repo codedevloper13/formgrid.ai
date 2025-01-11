@@ -1,0 +1,227 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { format } from "date-fns";
+import { getForms } from "@/server_action/form_submit_actions";
+import { useQuery } from "@tanstack/react-query";
+import type { JsonValue } from "type-fest";
+import { Plus, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface Form {
+  id: string;
+  title: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  jsonform: JsonValue;
+  slug: string;
+}
+
+const ITEMS_PER_PAGE = 10;
+
+export default function FormsPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["forms", currentPage],
+    queryFn: () => getForms(currentPage, ITEMS_PER_PAGE),
+  });
+
+  const totalPages = data ? Math.ceil(data.total / ITEMS_PER_PAGE) : 0;
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-red-500">Error</CardTitle>
+            <p className="text-muted-foreground">
+              There was an error loading forms. Please try again later.
+            </p>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Forms</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage and organize your forms
+          </p>
+        </div>
+        <Link href="/dashboard">
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Form
+          </Button>
+        </Link>
+      </div>
+
+      <div className="rounded-lg border bg-card">
+        <div className="relative w-full overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-[300px]">Title</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Description
+                </TableHead>
+                <TableHead className="hidden lg:table-cell">Created</TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="h-4 bg-muted rounded w-16 animate-pulse ml-auto"></div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : data?.forms.map((form: Form) => (
+                    <TableRow key={form.id} className="group">
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{form.title}</div>
+                          <div className="text-sm text-muted-foreground md:hidden">
+                            {form.description || "No description"}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {form.description || "No description"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {format(new Date(form.createdAt), "MMM d, yyyy")}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          <Link href={`/forms/${form.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex justify-between items-center gap-4 flex-col sm:flex-row">
+          <p className="text-sm text-muted-foreground">
+            Showing page {currentPage} of {totalPages}
+          </p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <PaginationItem key={page} className="hidden sm:inline-block">
+                    <PaginationLink
+                      onClick={() => handlePageChange(page)}
+                      isActive={currentPage === page}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </div>
+  );
+}
