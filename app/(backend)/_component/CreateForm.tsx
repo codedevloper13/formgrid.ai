@@ -39,7 +39,7 @@ const CreateForm = () => {
       setTextareaValue("");
       // Redirect to the new form page
       if (data?.data?.id) {
-        router.push(`/forms/${data.data.id}`);
+        router.push(`/form-edit/${data.data.id}`);
       }
     },
     onSettled: () => {

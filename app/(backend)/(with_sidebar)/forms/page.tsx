@@ -22,9 +22,9 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { format } from "date-fns";
 import { getForms, deleteForm } from "@/server_action/form_submit_actions";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonValue } from "type-fest";
-import { Plus, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,8 +45,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import CreateForm from "../_component/CreateForm";
+import CreateForm from "../../_component/CreateForm";
 
 interface Form {
   id: string;
@@ -62,7 +61,6 @@ const ITEMS_PER_PAGE = 10;
 
 export default function FormsPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
@@ -177,7 +175,7 @@ export default function FormsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <Link href={`/forms/${form.id}`}>
+                              <Link href={`/form-edit/${form.id}`}>
                                 <DropdownMenuItem>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit

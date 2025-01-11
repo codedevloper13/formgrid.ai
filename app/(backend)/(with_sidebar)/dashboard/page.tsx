@@ -1,4 +1,4 @@
-import CreateForm from "../_component/CreateForm";
+import CreateForm from "../../_component/CreateForm";
 
 const Dashboard = () => {
   return (
