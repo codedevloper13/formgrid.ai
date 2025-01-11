@@ -1,3 +1,14 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function Home() {
-  return <h1>Hold on the product are coming soon...</h1>;
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push("/backend");
+  }, [router]);
+
+  return null;
 }
