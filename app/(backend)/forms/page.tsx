@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -18,12 +18,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { format } from "date-fns";
-import { getForms } from "@/server_action/form_submit_actions";
-import { useQuery } from "@tanstack/react-query";
+import { getForms, deleteForm } from "@/server_action/form_submit_actions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { JsonValue } from "type-fest";
 import { Plus, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import {
@@ -34,6 +33,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import CreateForm from "../_component/CreateForm";
 
 interface Form {
   id: string;
@@ -48,7 +61,10 @@ interface Form {
 const ITEMS_PER_PAGE = 10;
 
 export default function FormsPage() {
+  const { toast } = useToast();
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["forms", currentPage],
@@ -85,12 +101,7 @@ export default function FormsPage() {
             Manage and organize your forms
           </p>
         </div>
-        <Link href="/dashboard">
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Create Form
-          </Button>
-        </Link>
+        <CreateForm />
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -166,14 +177,66 @@ export default function FormsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
+                              <Link href={`/forms/${form.id}`}>
+                                <DropdownMenuItem>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </Link>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Are you sure?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete your form and remove
+                                      all associated data.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={async () => {
+                                        try {
+                                          await deleteForm(form.id);
+                                          toast({
+                                            title: "Delete",
+                                            description:
+                                              "Form Deleted Successfully",
+                                            variant: "default",
+                                          });
+                                          queryClient.invalidateQueries({
+                                            queryKey: ["forms"],
+                                          });
+                                        } catch (error) {
+                                          toast({
+                                            title: "Error",
+                                            description:
+                                              "An unexpected" + error,
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Delete Form
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -193,10 +256,15 @@ export default function FormsPage() {
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                />
+                {currentPage === 1 ? (
+                  <div className="opacity-50 cursor-not-allowed">
+                    <PaginationPrevious />
+                  </div>
+                ) : (
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  />
+                )}
               </PaginationItem>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
@@ -214,8 +282,16 @@ export default function FormsPage() {
 
               <PaginationItem>
                 <PaginationNext
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    currentPage !== totalPages
+                      ? handlePageChange(currentPage + 1)
+                      : undefined
+                  }
+                  className={
+                    currentPage === totalPages
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
                 />
               </PaginationItem>
             </PaginationContent>
