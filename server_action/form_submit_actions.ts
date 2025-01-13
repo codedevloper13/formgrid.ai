@@ -1,11 +1,54 @@
 'use server';
 
 import { chatSession } from '@/config/AiModal';
-import { PrismaClient } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server';
+import { db } from '@/prisma/database';
+import { FormField } from '@/types/form';
 
-const prisma = new PrismaClient();
+interface FormResponse<T = Form> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface JsonFormField {
+  id: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  options?: string[];
+  placeholder?: string;
+}
+
+interface JsonForm {
+  fields: JsonFormField[];
+  settings?: {
+    submitButtonText?: string;
+    theme?: string;
+    layout?: string;
+  };
+}
+
+interface Form {
+  id: string;
+  title: string;
+  description: string | null;
+  formHeading: string | null;
+  status: string;
+  jsonform: JsonForm | null;
+  slug: string;
+  userId: string;
+  submissions?: number | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface GetFormsResponse {
+  forms: Form[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 function createSlug(title: string): string {
   return title
@@ -14,37 +57,8 @@ function createSlug(title: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-export async function submitForm(buttonType: string, textareaValue: string) {
-  try {
-    const { userId } = await auth();
-    
-    if (!userId) {
-      throw new Error("Unauthorized: User must be logged in");
-    }
-
-    // Add your server-side logic here
-    if (buttonType === 'Manually' && textareaValue === "") {
-      const title = "Untitled Form";
-      const form = await prisma.forms.create({
-        data: {
-          title,
-          slug: createSlug(title),
-          description: "Untitled Description",
-          jsonform: {},
-          userId: userId
-        }
-      });
-      return {
-        success: true,
-        data: form
-      };
-    }
-
-    if (buttonType === 'Ai') {
-      if (!textareaValue.trim()) {
-        throw new Error("Please provide an idea for AI form generation");
-      }
-      const PROMPT = `Based on the provided requirement, create a professional form structure adhering to these specifications:
+async function generateAiForm(description: string) {
+  const PROMPT = `Based on the provided requirement, create a professional form structure adhering to these specifications:
 
     1. Core Form Structure Requirements:
       {
@@ -112,127 +126,216 @@ export async function submitForm(buttonType: string, textareaValue: string) {
       ]
     }
     Please note: Please Return a clean, valid JSON object following this structure without any additional text or explanations.`;
-      
-      const result = await chatSession.sendMessage(textareaValue + PROMPT);
-      
-      if (!result) {
-        throw new Error("Failed to generate form");
-      }
 
-      try {
-        // Get the response text using the text() function
-        const responseText = await result.response.text();
-        console.log("Raw response:", responseText);
-
-        // Clean the response text
-        const cleanResponse = responseText
-          .replace(/```json\n?|\n?```/g, '') // Remove markdown code blocks
-          .replace(/[\u201C\u201D]/g, '"') // Replace smart quotes
-          .replace(/[\u2018\u2019]/g, "'") // Replace smart single quotes
-          .replace(/\\n/g, '') // Remove newline escapes
-          .replace(/\\"/g, '"') // Fix escaped quotes
-          .trim();
-        const parsedForm = JSON.parse(cleanResponse);
-        
-        // Validate the form structure
-        if (!parsedForm.formTitle || !parsedForm.formHeading || !Array.isArray(parsedForm.fields)) {
-          throw new Error("Invalid form structure: missing required fields");
-        }
-        
-        const form = await prisma.forms.create({
-          data: {
-            title: parsedForm.formTitle || "AI Generated Form",
-            slug: createSlug(parsedForm.formTitle || "ai-generated-form"),
-            description: parsedForm.formDescription || 'Untitled Description',
-            jsonform: parsedForm,
-            userId: userId
-          }
-        });
-        
-        return {
-          success: true,
-          data: form
-        };
-      } catch (error: unknown) {
-        console.log("Error in ai form generation: " + (error instanceof Error ? error.message : String(error)));
-        console.error('Error details:', {
-          error,
-          response: result.response
-        });
-        console.log('error here 1');
-        throw new Error('Failed to parse AI generated form: ' + (error instanceof Error ? error.message : String(error)));
-      }
+  try {
+    console.log("Sending AI request with description:", description);
+    const result = await chatSession.sendMessage("Description:" + description + PROMPT);
+    
+    if (!result?.response) {
+      throw new Error("Failed to generate form: AI response was invalid");
     }
 
-    throw new Error("Invalid button type");
+    const responseText = await result.response.text();
+    if (!responseText) {
+      throw new Error("AI response was empty");
+    }
 
-    // Revalidate the forms page
-    revalidatePath('/forms');
-    
-    // Return the processed data
-  
+    console.log("Raw AI response:", responseText);
+    const parsedForm = JSON.parse(responseText);
+    console.log("Parsed form:", parsedForm);
+
+    // Ensure the form structure is valid
+    if (!parsedForm || typeof parsedForm !== 'object') {
+      throw new Error("Invalid form structure: parsed result is not an object");
+    }
+
+    if (!parsedForm.formTitle || !parsedForm.formHeading || !Array.isArray(parsedForm.fields)) {
+      throw new Error("Invalid form structure: missing required fields");
+    }
+
+    // Clean and validate each field
+    parsedForm.fields = parsedForm.fields.map((field: FormField) => ({
+      ...field,
+      validation: {
+        ...field.validation,
+        pattern: field.validation?.pattern || null
+      }
+    }));
+
+    return parsedForm;
   } catch (error) {
-    console.error('Server error:', error);
-    throw new Error('Failed to process form data');
+    console.error("Error in generateAiForm:", error);
+    throw new Error(error instanceof Error ? error.message : String(error));
   }
 }
 
-/**
- * This TypeScript function retrieves a form by its ID after checking user authentication and
- * ownership.
- * @param {string} formId - The `formId` parameter in the `getFormById` function is a string that
- * represents the unique identifier of the form that you want to retrieve from the database. This
- * function is designed to fetch a form based on its `formId` and the authenticated user's `userId`.
- * @returns The function `getFormById` returns an object with two properties: `success` and `data`. The
- * `success` property is a boolean value indicating whether the operation was successful, and the
- * `data` property contains the form data if found.
- */
-export async function getFormById(formId: string) {
+export async function submitForm(buttonType: string, textareaValue: string): Promise<FormResponse<Form>> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized: User must be logged in" };
+    }
+
+    // Check if user exists in database
+    const existingUser = await db.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!existingUser) {
+      // Create user if doesn't exist
+      try {
+        await db.user.create({
+          data: { id: userId }
+        });
+      } catch (error) {
+        console.error("Error creating user:", error);
+        return { success: false, error: "Failed to create user profile" };
+      }
+    }
+
+    let formData;
+
+    if (buttonType === 'Manually') {
+      if (textareaValue !== "") {
+        return { success: false, error: "Manual form creation doesn't accept text input" };
+      }
+      formData = {
+        title: "Untitled Form",
+        description: "Untitled Description",
+        formHeading: "Untitled Form",
+        status: "draft",
+        jsonform: { fields: [] }, 
+      };
+    } else if (buttonType === 'Ai') {
+      if (!textareaValue.trim()) {
+        return { success: false, error: "Please provide an idea for AI form generation" };
+      }
+      
+      try {
+        const aiForm = await generateAiForm(textareaValue);
+        
+        // Deep clone and clean the form data
+        const cleanForm = {
+          formTitle: aiForm.formTitle,
+          formHeading: aiForm.formHeading,
+          formDescription: aiForm.formDescription,
+          fields: aiForm.fields.map((field: FormField) => ({
+            fieldName: field.fieldName,
+            fieldTitle: field.fieldTitle,
+            fieldType: field.fieldType,
+            placeholder: field.placeholder,
+            label: field.label,
+            required: Boolean(field.required),
+            options: Array.isArray(field.options) ? field.options : [],
+            validation: {
+              minLength: field.validation?.minLength || null,
+              maxLength: field.validation?.maxLength || null,
+              pattern: field.validation?.pattern || null,
+              errorMessage: field.validation?.errorMessage || ''
+            }
+          }))
+        };
+
+        formData = {
+          title: cleanForm.formTitle || "AI Generated Form",
+          description: cleanForm.formDescription || 'Untitled Description',
+          formHeading: cleanForm.formHeading || cleanForm.formTitle || "AI Generated Form",
+          status: "draft",
+          jsonform: { fields: cleanForm.fields }, 
+        };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to generate AI form'
+        };
+      }
+    } else {
+      return { success: false, error: "Invalid button type" };
+    }
+
+    // Create the form in the database
+    const slug = createSlug(formData.title);
+    const data = {
+      ...formData,
+      slug,
+      userId,
+    };
+
+    try {
+      const form = await db.form.create({ data });
+
+      return { 
+        success: true, 
+        data: {
+          id: form.id,
+          title: form.title,
+          description: form.description,
+          formHeading: form.formHeading,
+          status: form.status,
+          jsonform: isJsonForm(form.jsonform) ? form.jsonform : null,
+          slug: form.slug,
+          userId: form.userId
+        } 
+      };
+    } catch (dbError) {
+      console.error("Database error:", dbError instanceof Error ? dbError.message : String(dbError));
+      return { 
+        success: false, 
+        error: 'Failed to save form to database. Please try again.'
+      };
+    }
+  } catch (error) {
+    console.error("Form submission error:", error instanceof Error ? error.message : String(error));
+    return { 
+      success: false, 
+      error: 'An unexpected error occurred. Please try again.'
+    };
+  }
+}
+
+function isJsonForm(json: unknown): json is JsonForm {
+  return typeof json === 'object' && json !== null && 'fields' in json;
+}
+
+export async function getFormById(formId: string): Promise<FormResponse<Form>> {
   try {
     const { userId } = await auth();
     
     if (!userId) {
-      throw new Error("Unauthorized: User must be logged in");
+      return { success: false, error: "Unauthorized: User must be logged in" };
     }
 
-    const form = await prisma.forms.findUnique({
+    const form = await db.form.findUnique({
       where: {
         id: formId,
         userId: userId
-      },
+      }
     });
 
     if (!form) {
-      throw new Error('Form not found');
+      return { success: false, error: 'Form not found' };
     }
+
+    // Parse the jsonform field if it exists
+    const formData: Form = {
+      ...form,
+      jsonform: isJsonForm(form.jsonform) ? form.jsonform : null
+    };
 
     return {
       success: true,
-      data: form
+      data: formData
     };
   } catch (error) {
-    console.error('Error fetching form:', error);
-    throw error;
+    console.error('Server error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to fetch form'
+    };
   }
 }
 
-/**
- * This TypeScript function retrieves a specified number of forms for a user, handling authentication
- * and pagination.
- * @param {number} [page=1] - The `page` parameter in the `getForms` function is used to specify the
- * page number of forms to retrieve. By default, it is set to 1 if not provided. This parameter is used
- * to calculate the offset for pagination, allowing users to navigate through different pages of forms.
- * @param {number} [limit=10] - The `limit` parameter in the `getForms` function specifies the maximum
- * number of forms to retrieve in a single request. By default, if the `limit` parameter is not
- * provided when calling the function, it is set to 10. This means that by default, the function will
- * retrieve up
- * @returns The `getForms` function returns an object with the following properties:
- * - `forms`: an array of form objects retrieved from the database
- * - `total`: the total number of forms for the user in the database
- * - `page`: the current page number
- * - `limit`: the limit of forms per page
- */
-export async function getForms(page: number = 1, limit: number = 10) {
+export async function getForms(page: number = 1, limit: number = 10): Promise<GetFormsResponse> {
   try {
     const { userId } = await auth();
     
@@ -243,7 +346,7 @@ export async function getForms(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
 
     const [forms, total] = await Promise.all([
-      prisma.forms.findMany({
+      db.form.findMany({
         where: {
           userId: userId
         },
@@ -252,8 +355,11 @@ export async function getForms(page: number = 1, limit: number = 10) {
         orderBy: {
           createdAt: "desc",
         },
-      }),
-      prisma.forms.count({
+      }).then(forms => forms.map(form => ({
+        ...form,
+        jsonform: isJsonForm(form.jsonform) ? form.jsonform : null
+      }))),
+      db.form.count({
         where: {
           userId: userId
         }
@@ -272,24 +378,15 @@ export async function getForms(page: number = 1, limit: number = 10) {
   }
 }
 
-/**
- * The function `deleteForm` deletes a form associated with a specific formId after performing
- * authorization checks.
- * @param {string} formId - The `formId` parameter is a string that represents the unique identifier of
- * the form that you want to delete. This identifier is used to locate and delete the specific form
- * from the database.
- * @returns The `deleteForm` function returns an object with a `success` property set to `true` if the
- * form deletion is successful.
- */
-export async function deleteForm(formId: string) {
+export async function deleteForm(formId: string): Promise<FormResponse<Form>> {
   try {
     const { userId } = await auth();
     
     if (!userId) {
-      throw new Error("Unauthorized: User must be logged in");
+      return { success: false, error: "Unauthorized: User must be logged in" };
     }
 
-    const form = await prisma.forms.findUnique({
+    const form = await db.form.findUnique({
       where: {
         id: formId,
         userId: userId
@@ -297,19 +394,27 @@ export async function deleteForm(formId: string) {
     });
 
     if (!form) {
-      throw new Error("Form not found or unauthorized");
+      return { success: false, error: "Form not found or unauthorized" };
     }
 
-    await prisma.forms.delete({
+    // Ensure jsonform is properly typed before returning
+    const formData: Form = {
+      ...form,
+      jsonform: isJsonForm(form.jsonform) ? form.jsonform : null
+    };
+
+    await db.form.delete({
       where: {
         id: formId
       }
     });
 
-    revalidatePath('/forms');
-    return { success: true };
+    return { success: true, data: formData };
   } catch (error) {
     console.error("Error deleting form:", error);
-    throw error;
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to delete form'
+    };
   }
 }

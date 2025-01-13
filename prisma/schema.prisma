@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,14 +10,104 @@ datasource db {
   url      = env("DATABASE_URL_POSTGRES")
 }
 
-model forms {
-  id          String   @id @default(cuid())
+enum PlanType {
+  FREE
+  PRO
+  ULTIMATE
+}
+
+model User {
+  id               String         @id
+  stripeCustomerId String?        @unique
+  subscription     Subscription?
+  forms            Form[]
+  formResponses    FormResponse[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model Form {
+  id          String         @id @default(cuid())
   userId      String
+  user        User?          @relation(fields: [userId], references: [id])
   title       String
   slug        String
   description String?
+  formHeading String?
   jsonform    Json
-  status      String   @default("draft")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String         @default("draft")
+  responses   FormResponse[]
+  submissions Int?           @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([userId, slug])
+  @@map("forms")
+}
+
+model FormResponse {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  response  Json
+  metadata  Json? // For storing browser info, IP, etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("form_responses")
+}
+
+model FormAnalytics {
+  id        String   @id @default(cuid())
+  formId    String   @unique
+  views     Int      @default(0)
+  starts    Int      @default(0)
+  completes Int      @default(0)
+  avgTime   Float? // Average time to complete in seconds
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("form_analytics")
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id])
+  planType               PlanType  @default(FREE)
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+model Plan {
+  id            String   @id @default(cuid())
+  name          PlanType @unique
+  stripePriceId String   @unique
+  price         Float
+  features      Json // Array of features included in the plan
+  limits        Json // Plan limitations (forms, responses, etc.)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("plans")
+}
+
+model StripeEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String
+  status        String
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@map("stripe_events")
 }
