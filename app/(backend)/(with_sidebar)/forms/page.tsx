@@ -21,9 +21,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { format } from "date-fns";
-import { getForms, deleteForm } from "@/server_action/form_submit_actions";
+import {
+  getForms,
+  deleteForm,
+  GetFormsResponse,
+} from "@/server_action/form_submit_actions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { JsonValue } from "type-fest";
+//import type { Form } from "@prisma/client";
 import { Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
@@ -47,16 +51,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import CreateForm from "../../_component/CreateForm";
 
-interface Form {
-  id: string;
-  title: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  jsonform: JsonValue;
-  slug: string;
-}
-
 const ITEMS_PER_PAGE = 10;
 
 export default function FormsPage() {
@@ -64,7 +58,7 @@ export default function FormsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<GetFormsResponse>({
     queryKey: ["forms", currentPage],
     queryFn: () => getForms(currentPage, ITEMS_PER_PAGE),
   });
@@ -116,25 +110,41 @@ export default function FormsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading
-                ? Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                      </TableCell>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                    </TableCell>
 
-                      <TableCell>
-                        <div className="h-4 bg-muted rounded w-16 animate-pulse ml-auto"></div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : data?.forms.map((form: Form) => (
+                    <TableCell>
+                      <div className="h-4 bg-muted rounded w-16 animate-pulse ml-auto"></div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : data?.forms.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10">
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-muted-foreground text-lg">
+                        No forms found
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Create a new form to get started
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data?.forms
+                  .filter((form) => form.createdAt !== undefined)
+                  .map((form) => (
                     <TableRow key={form.id} className="group">
                       <TableCell>
                         <div>
@@ -148,12 +158,12 @@ export default function FormsPage() {
                         {form.description || "No description"}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {format(new Date(form.createdAt), "MMM d, yyyy")}
+                        {format(form.createdAt ?? new Date(), "MMM d, yyyy")}
                       </TableCell>
 
                       <TableCell className="text-right">
                         <div className="flex justify-end items-center gap-2">
-                          <Link href={`/forms/${form.id}`}>
+                          <Link href={`/form-edit/${form.id}`}>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -240,7 +250,8 @@ export default function FormsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+              )}
             </TableBody>
           </Table>
         </div>

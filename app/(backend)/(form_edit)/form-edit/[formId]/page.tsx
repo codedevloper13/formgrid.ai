@@ -3,12 +3,14 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getFormById } from "@/server_action/form_submit_actions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Share2, Settings, Eye, MessageSquare } from "lucide-react";
+import { Share2, Settings, Eye, MessageSquare, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import FormUI from "../_components/FormUI";
+import { validateAndTransformFormData } from "@/lib/utils/form-validator";
 
 export default function FormPage() {
   const params = useParams();
@@ -57,6 +59,14 @@ export default function FormPage() {
       {/* Form Details Sidebar */}
       <div className="w-96 border-r bg-background shadow-sm">
         <div className="p-6">
+          <Link href="/dashboard">
+            <h2 className=" font-semibold flex items-center gap-2 hover:underline hover:text-primary">
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </h2>
+          </Link>
+        </div>
+        <div className="p-6">
           <h2 className="text-2xl font-semibold mb-6">
             {form?.title || "Form"}
           </h2>
@@ -97,61 +107,9 @@ export default function FormPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="max-w-5xl mx-auto">
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="editor">Form Editor</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Form Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                          Description
-                        </h3>
-                        <p className="text-sm">
-                          {form?.description || "No description provided."}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                          Form Schema
-                        </h3>
-                        <pre className="bg-muted p-4 rounded-lg text-sm overflow-auto">
-                          {JSON.stringify(form?.jsonform, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="editor">
-                <Card>
-                  <CardContent className="pt-6">
-                    Form editor coming soon...
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="preview">
-                <Card>
-                  <CardContent className="pt-6">
-                    Form preview coming soon...
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+        {form && validateAndTransformFormData(form) && (
+          <FormUI JsonFromdata={validateAndTransformFormData(form)!} />
+        )}
       </div>
     </div>
   );
