@@ -1,4 +1,3 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -13,195 +12,208 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormData } from "@/types/form";
+import { FormData, FormField } from "@/types/form";
+import FieldEdit from "./FieldEdit";
+import { useState } from "react";
 
 interface FormUIProps {
   JsonFromdata: FormData;
 }
 
 const FormUI = ({ JsonFromdata }: FormUIProps) => {
-  return (
-    <div>
-      <div className="p-8">
-        <div className="max-w-5xl mx-auto">
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="editor">Form Editor</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
+  const [formData, setFormData] = useState<FormData>(JsonFromdata);
 
-            <TabsContent value="overview">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Form Details</CardTitle>
-                </CardHeader>
-                <CardContent>
+  const handleFieldUpdate = (updatedField: FormField, index: number) => {
+    const newFields = [...formData.jsonform.fields];
+    newFields[index] = updatedField;
+    setFormData({
+      ...formData,
+      jsonform: {
+        ...formData.jsonform,
+        fields: newFields,
+      },
+    });
+  };
+
+  const handleFieldDelete = (index: number) => {
+    const newFields = formData.jsonform.fields.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      jsonform: {
+        ...formData.jsonform,
+        fields: newFields,
+      },
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 grainy">
+      <div className="p-6 md:p-12">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md">
+          <div className="p-6 md:p-8">
+            <Card className="border-none shadow-none bg-white">
+              <CardHeader className="px-0">
+                <CardTitle className="text-2xl font-bold">
+                  Form Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-0 space-y-8">
+                <div className="space-y-6">
+                  <div>
+                    <Label className="text-base font-semibold mb-2.5">
+                      Form Title
+                    </Label>
+                    <Input
+                      value={formData?.formHeading || ""}
+                      className="text-lg font-medium border-2 focus:ring-2 focus:ring-primary/20"
+                      placeholder="Enter form title"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-base font-semibold mb-2.5">
+                      Description
+                    </Label>
+                    <Textarea
+                      className="min-h-[120px] resize-none border-2 focus:ring-2 focus:ring-primary/20"
+                      placeholder="Enter form description"
+                      defaultValue={formData?.description || ""}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold">Form Fields</h3>
                   <div className="space-y-6">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-4">
-                        Form title
-                      </p>
-                      <div className="space-y-2 mb-6">
-                        <Input
-                          value={JsonFromdata?.formHeading || ""}
-                          className="text-lg font-medium"
-                          placeholder="Enter form title"
-                        />
-                      </div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Description
-                      </p>
-                      <div className="mb-8">
-                        <Textarea
-                          className="min-h-[100px] resize-none"
-                          placeholder="Enter form description"
-                          defaultValue={JsonFromdata?.description || ""}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold mb-4">
-                        Form Fields
-                      </h3>
-                      <div className="space-y-6">
-                        {JsonFromdata?.jsonform?.fields?.map((field, index) => (
-                          <div
-                            key={`${field.fieldName}_${index}`}
-                            className="my-3"
-                          >
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {formData?.jsonform?.fields?.map((field, index) => (
+                      <div
+                        key={`${field.fieldName}_${index}`}
+                        className="bg-gray-50/50 p-6 rounded-lg border-2 border-gray-100 hover:border-primary/20 transition-colors"
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-base font-medium">
                               {field?.label}
                               {field.required && (
                                 <span className="text-red-500 ml-1">*</span>
                               )}
-                            </label>
-                            {field.fieldType === "select" ? (
-                              <Select name={field?.fieldName}>
-                                <SelectTrigger
-                                  className={cn(
-                                    `${index}-${JsonFromdata.id}`,
-                                    "w-full"
-                                  )}
-                                >
-                                  <SelectValue
-                                    placeholder={
-                                      field?.placeholder || "Select an option"
-                                    }
-                                  />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {field.options?.map((option, optionIndex) => (
-                                    <SelectItem
-                                      key={`${option}_${optionIndex}`}
-                                      value={option}
-                                    >
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : field.fieldType === "radio" ? (
-                              <RadioGroup
-                                defaultValue={field.options?.[0]}
-                                name={field?.fieldName}
-                                className="space-y-2"
-                              >
-                                {field.options?.map((option, optionIndex) => (
-                                  <div
-                                    key={`${option}_${optionIndex}`}
-                                    className="flex items-center space-x-2"
-                                  >
-                                    <RadioGroupItem
-                                      value={option}
-                                      id={`${field.fieldName}-${option}`}
-                                      className={cn(
-                                        `${index}-${JsonFromdata.id}`
-                                      )}
-                                    />
-                                    <Label
-                                      htmlFor={`${field.fieldName}-${option}`}
-                                    >
-                                      {option}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </RadioGroup>
-                            ) : field.fieldType === "checkbox" ? (
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`${field.fieldName}-${index}`}
-                                  name={field?.fieldName}
-                                  className={cn(`${index}-${JsonFromdata.id}`)}
-                                />
-                                <Label
-                                  htmlFor={`${field.fieldName}-${index}`}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {field.label}
-                                </Label>
-                              </div>
-                            ) : field.fieldType === "textarea" ? (
-                              <div className="flex items-center space-x-2">
-                                {/* <Checkbox
-                                  id={`${field.fieldName}-${index}`}
-                                  name={field?.fieldName}
-                                  className={cn(`${index}-${JsonFromdata.id}`)}
-                                /> */}
-                                <Textarea
-                                  className={cn(
-                                    `${index}-${JsonFromdata.id}`,
-                                    "w-full"
-                                  )}
-                                  placeholder={field?.placeholder}
-                                  name={field?.fieldName}
-                                />
-                              </div>
-                            ) : (
-                              <Input
-                                type={field?.fieldType}
-                                placeholder={field?.placeholder}
-                                className={cn(
-                                  `${index}-${JsonFromdata.id}`,
-                                  "w-full"
-                                )}
-                                name={field?.fieldName}
-                              />
-                            )}
-
-                            {field.validation?.errorMessage && (
-                              <p className="text-xs text-red-500 mt-1">
-                                {field.validation.errorMessage}
-                              </p>
-                            )}
+                            </Label>
+                            <FieldEdit
+                              field={field}
+                              onUpdate={(updatedField) =>
+                                handleFieldUpdate(updatedField, index)
+                              }
+                              onDelete={() => handleFieldDelete(index)}
+                            />
                           </div>
-                        ))}
+
+                          {field.fieldType === "select" ? (
+                            <Select name={field?.fieldName}>
+                              <SelectTrigger
+                                className={cn(
+                                  `${index}-${formData.id}`,
+                                  "w-full border-2 focus:ring-2 focus:ring-primary/20"
+                                )}
+                              >
+                                <SelectValue
+                                  placeholder={
+                                    field?.placeholder || "Select an option"
+                                  }
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {field.options?.map((option, optionIndex) => (
+                                  <SelectItem
+                                    key={`${option}_${optionIndex}`}
+                                    value={option}
+                                  >
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : field.fieldType === "radio" ? (
+                            <RadioGroup
+                              defaultValue={field.options?.[0]}
+                              name={field?.fieldName}
+                              className="space-y-3"
+                            >
+                              {field.options?.map((option, optionIndex) => (
+                                <div
+                                  key={`${option}_${optionIndex}`}
+                                  className="flex items-center space-x-3"
+                                >
+                                  <RadioGroupItem
+                                    value={option}
+                                    id={`${field.fieldName}-${option}`}
+                                    className={cn(
+                                      `${index}-${formData.id}`,
+                                      "border-2"
+                                    )}
+                                  />
+                                  <Label
+                                    htmlFor={`${field.fieldName}-${option}`}
+                                    className="text-sm"
+                                  >
+                                    {option}
+                                  </Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
+                          ) : field.fieldType === "checkbox" ? (
+                            <div className="flex items-center space-x-3">
+                              <Checkbox
+                                id={`${field.fieldName}-${index}`}
+                                name={field?.fieldName}
+                                className={cn(
+                                  `${index}-${formData.id}`,
+                                  "border-2"
+                                )}
+                              />
+                              <Label
+                                htmlFor={`${field.fieldName}-${index}`}
+                                className="text-sm"
+                              >
+                                {field.label}
+                              </Label>
+                            </div>
+                          ) : field.fieldType === "textarea" ? (
+                            <Textarea
+                              className={cn(
+                                `${index}-${formData.id}`,
+                                "w-full min-h-[120px] border-2 focus:ring-2 focus:ring-primary/20"
+                              )}
+                              placeholder={field?.placeholder}
+                              name={field?.fieldName}
+                            />
+                          ) : (
+                            <Input
+                              type={field?.fieldType}
+                              placeholder={field?.placeholder}
+                              className={cn(
+                                `${index}-${formData.id}`,
+                                "w-full border-2 focus:ring-2 focus:ring-primary/20"
+                              )}
+                              name={field?.fieldName}
+                            />
+                          )}
+
+                          {field.required && field.validation?.errorMessage && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {field.validation.errorMessage}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="editor">
-              <Card>
-                <CardContent className="pt-6">
-                  Form editor coming soon...
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="preview">
-              <Card>
-                <CardContent className="pt-6">
-                  Form preview coming soon...
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
 export default FormUI;
