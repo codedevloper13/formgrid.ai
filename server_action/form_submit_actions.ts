@@ -27,6 +27,10 @@ interface JsonForm {
     theme?: string;
     layout?: string;
   };
+  submitButtonText?: string;
+  theme?: string;
+  layout?: string;
+  [key: string]: any;
 }
 
 interface Form {
@@ -289,6 +293,43 @@ export async function submitForm(buttonType: string, textareaValue: string): Pro
     return { 
       success: false, 
       error: 'An unexpected error occurred. Please try again.'
+    };
+  }
+}
+
+export async function updateForm(formId: string, formData: Form): Promise<FormResponse<Form>> {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
+    const form = await db.form.update({
+      where: {
+        id: formId,
+      },
+      data: {
+        title: formData.title,
+        description: formData.description,
+        formHeading: formData.formHeading,
+        jsonform: isJsonForm(formData.jsonform) ? formData.jsonform : undefined,
+        status: formData.status,
+      },
+    });
+
+    return {
+      success: true,
+      data: form,
+    };
+  } catch (error) {
+    console.error("Error updating form:", error);
+    return {
+      success: false,
+      error: "Failed to update form",
     };
   }
 }
