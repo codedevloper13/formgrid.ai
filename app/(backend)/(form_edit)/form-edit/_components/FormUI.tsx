@@ -104,11 +104,20 @@ const SortableField = ({ field, index, onUpdate, onDelete }: SortableFieldProps)
               ))}
             </RadioGroup>
           ) : field.fieldType === "checkbox" ? (
-            <div className="flex items-center space-x-3">
-              <Checkbox id={`${field.fieldName}-${index}`} name={field?.fieldName} className={cn("border-2")} />
-              <Label htmlFor={`${field.fieldName}-${index}`} className="text-sm">
-                {field.label}
-              </Label>
+            <div className="space-y-3">
+              {field.options?.map((option, optionIndex) => (
+                <div key={`${option}_${optionIndex}`} className="flex items-center space-x-3">
+                  <Checkbox 
+                    id={`${field.fieldName}-${optionIndex}`} 
+                    name={field?.fieldName} 
+                    value={option}
+                    className={cn("border-2")} 
+                  />
+                  <Label htmlFor={`${field.fieldName}-${optionIndex}`} className="text-sm">
+                    {option}
+                  </Label>
+                </div>
+              ))}
             </div>
           ) : field.fieldType === "textarea" ? (
             <Textarea
