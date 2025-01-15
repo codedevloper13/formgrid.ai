@@ -61,7 +61,7 @@ const FieldEdit = ({ field, onUpdate, onDelete }: FieldEditProps) => {
               Make changes to your form field here. Click save when you&apos;re done.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[300px] overflow-y-auto">
             <div className="grid gap-2">
               <Label htmlFor="label">Field Label</Label>
               <Input
@@ -74,12 +74,16 @@ const FieldEdit = ({ field, onUpdate, onDelete }: FieldEditProps) => {
               <Label htmlFor="fieldType">Field Type</Label>
               <Select
                 value={editedField.fieldType}
-                onValueChange={(value) => setEditedField({ ...editedField, fieldType: value })}
+                onValueChange={(value) => setEditedField({ 
+                  ...editedField, 
+                  fieldType: value,
+                  options: value === "checkbox" || value === "radio" || value === "select" ? ["Option 1"] : undefined 
+                })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select field type" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
+                <SelectContent className="h-[200px] overflow-y-auto">
                   <SelectItem value="text" className="hover:bg-accent focus:bg-accent cursor-pointer">
                     <div className="flex items-center gap-3 py-1">
                       <div className="bg-blue-50 p-1.5 rounded-md">
@@ -215,46 +219,41 @@ const FieldEdit = ({ field, onUpdate, onDelete }: FieldEditProps) => {
                 <p className="text-sm text-muted-foreground">This message will be shown when the field is left empty</p>
               </div>
             )}
-            {(editedField.fieldType === "select" || editedField.fieldType === "radio") && (
+            {(editedField.fieldType === "checkbox" || editedField.fieldType === "radio" || editedField.fieldType === "select") && (
               <div className="grid gap-2">
                 <Label>Options</Label>
                 <div className="space-y-2">
                   {editedField.options?.map((option, index) => (
-                    <div key={index} className="flex gap-2">
+                    <div key={index} className="flex items-center gap-2">
                       <Input
                         value={option}
                         onChange={(e) => {
                           const newOptions = [...(editedField.options || [])];
                           newOptions[index] = e.target.value;
-                          setEditedField({
-                            ...editedField,
-                            options: newOptions,
-                          });
+                          setEditedField({ ...editedField, options: newOptions });
                         }}
                       />
                       <Button
-                        variant="destructive"
+                        variant="ghost"
                         size="icon"
+                        className="h-8 w-8"
                         onClick={() => {
-                          const newOptions = editedField.options?.filter((_, i) => i !== index);
-                          setEditedField({
-                            ...editedField,
-                            options: newOptions,
-                          });
+                          const newOptions = [...(editedField.options || [])];
+                          newOptions.splice(index, 1);
+                          setEditedField({ ...editedField, options: newOptions });
                         }}
                       >
-                        <Trash className="w-4 h-4" />
+                        <Trash className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
                   <Button
                     variant="outline"
-                    onClick={() =>
-                      setEditedField({
-                        ...editedField,
-                        options: [...(editedField.options || []), ""],
-                      })
-                    }
+                    className="w-full"
+                    onClick={() => {
+                      const newOptions = [...(editedField.options || []), "New Option"];
+                      setEditedField({ ...editedField, options: newOptions });
+                    }}
                   >
                     Add Option
                   </Button>
